@@ -1,5 +1,5 @@
 -- ╔══════════════════════════════════════════════════════════════════════════╗
--- ║                    Acrylic UI Library  v4.0.0                          ║
+-- ║                    Zenith UI Library  v4.0.0                           ║
 -- ║                                                                        ║
 -- ║  New in v4:                                                            ║
 -- ║  • Library.Version string                                              ║
@@ -29,8 +29,8 @@ local hs  = game:GetService("HttpService")
 local Library       = {}
 Library.__index     = Library
 Library.Version     = "4.0.0"
-Library.Name        = "Acrylic"
-Library.Author      = "Acrylic Team"
+Library.Name        = "ZenithUi"
+Library.Author      = "Zenith Team"
 Library.ActivePicker = nil
 
 local Connections   = {}
@@ -164,7 +164,7 @@ end
 
 -- Warn with library prefix
 local function Warn(msg, ...)
-    warn(("[Acrylic v%s] %s"):format(Library.Version, msg:format(...)))
+    warn(("[Zenith Ui v%s] %s"):format(Library.Version, msg:format(...)))
 end
 
 -- Validate required cfg fields
@@ -358,11 +358,18 @@ local function EnsureNotifContainer(sGui)
     if NotifContainer and NotifContainer.Parent then return NotifContainer end
     NotifContainer=New("Frame",{
         Name="NotifContainer",BackgroundTransparency=1,
-        Position=UDim2.new(1,-276,0,16),
+        Position=UDim2.new(1,-276,1,-16),
+        AnchorPoint=Vector2.new(0,1),
         Size=UDim2.new(0,260,1,-32),
         Parent=sGui,
     })
-    List(NotifContainer,6)
+    local ncList=New("UIListLayout",{
+        Padding=UDim.new(0,6),
+        SortOrder=Enum.SortOrder.LayoutOrder,
+        FillDirection=Enum.FillDirection.Vertical,
+        VerticalAlignment=Enum.VerticalAlignment.Bottom,
+        Parent=NotifContainer,
+    })
     return NotifContainer
 end
 
@@ -384,27 +391,26 @@ local function FireNotify(sGui, cfg)
         Parent=NotifContainer,
     })
 
-    -- Card (the visible notif)
+    -- Card (the visible notif) — square corners, slide-up animation
     local card=New("Frame",{
         Name="Card",
         BackgroundColor3=Color3.fromRGB(16,16,20),
         BorderSizePixel=0,
-        -- Start: shifted right + invisible
-        Position=UDim2.new(0,Size.Notif.Width+20,0,0),
+        -- Start: below + invisible (old-style slide up)
+        Position=UDim2.new(0,0,0,Size.Notif.Height+10),
         Size=UDim2.new(1,0,0,Size.Notif.Height),
         BackgroundTransparency=1,
         ClipsDescendants=true,
         Parent=wrapper,
     })
-    Corner(card,8)
+    -- NO Corner() here → square notif
     local cardStroke=Stroke(card,accent,1,0.4)
 
-    -- Glow left bar (accent color)
+    -- Glow left bar (accent color) — square
     local glowBar=New("Frame",{
         BackgroundColor3=accent, BorderSizePixel=0,
         Size=UDim2.new(0,3,1,0), Parent=card,
     })
-    Corner(glowBar,2)
 
     -- Icon area
     local iconFrame=New("Frame",{
@@ -414,7 +420,7 @@ local function FireNotify(sGui, cfg)
         Size=UDim2.new(0,24,0,24),
         Parent=card,
     })
-    Corner(iconFrame,6)
+    -- no corner on icon frame → square
     local iconImg=New("ImageLabel",{
         BackgroundTransparency=1, Image=icon,
         ImageColor3=accent,
@@ -455,7 +461,7 @@ local function FireNotify(sGui, cfg)
         Size=UDim2.new(1,0,1,0),
         Parent=timerTrack,
     })
-    Corner(timerFill,2)
+    -- square timer fill
     New("UIGradient",{
         Color=ColorSequence.new({
             ColorSequenceKeypoint.new(0, Theme.AccentDark or Color3.fromRGB(80,65,180)),
@@ -474,19 +480,11 @@ local function FireNotify(sGui, cfg)
         Parent=card,
     })
 
-    -- ── Animate IN ──────────────────────────────────────────────────────────
-    -- Step 1: slide in + fade
+    -- ── Animate IN (old-style: slide up from below) ─────────────────────────
+    -- Step 1: slide up + fade in
     Tween(card,{Position=UDim2.new(0,0,0,0), BackgroundTransparency=0},
-        0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-    Tween(cardStroke,{Transparency=0}, 0.35)
-
-    -- Step 2: icon pulse
-    task.delay(0.1,function()
-        Tween(iconImg,{Size=UDim2.new(0,18,0,18)},0.12,Enum.EasingStyle.Back,Enum.EasingDirection.Out)
-        task.delay(0.14,function()
-            Tween(iconImg,{Size=UDim2.new(0,14,0,14)},0.1,Enum.EasingStyle.Quint)
-        end)
-    end)
+        0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    Tween(cardStroke,{Transparency=0}, 0.25)
 
     -- Step 3: timer drain
     Tween(timerFill,{Size=UDim2.new(0,0,1,0)}, duration, Enum.EasingStyle.Linear)
@@ -495,8 +493,8 @@ local function FireNotify(sGui, cfg)
     local closed=false
     local function Close()
         if closed then return end; closed=true
-        Tween(card,{Position=UDim2.new(0,Size.Notif.Width+24,0,0),BackgroundTransparency=1},
-            0.28,Enum.EasingStyle.Back,Enum.EasingDirection.In)
+        Tween(card,{Position=UDim2.new(0,0,0,Size.Notif.Height+10),BackgroundTransparency=1},
+            0.22,Enum.EasingStyle.Quint,Enum.EasingDirection.In)
         Tween(cardStroke,{Transparency=1},0.28)
         task.delay(0.32,function()
             Tween(wrapper,{Size=UDim2.new(1,0,0,0)},0.18,Enum.EasingStyle.Quint)
@@ -543,7 +541,7 @@ function Library.new(title, configFolder)
     EnsureNotifContainer(self.screenGui)
 
     self:Notify({
-        Title="Acrylic  v"..Library.Version,
+        Title="Zenith Ui  v"..Library.Version,
         Description=self._deviceType.." detected — UI ready",
         Duration=3, Type="Success",
     })
@@ -730,6 +728,91 @@ function Library:_Build()
     MakeDraggable(self.container,self.topBar)
     self.screenGui.Parent=plr.LocalPlayer:WaitForChild("PlayerGui")
     self._acrylicBlur=AcrylicBlur.new(self.container)
+    self:_BuildWatermark()
+end
+
+-- // ─── Watermark ────────────────────────────────────────────────────────────
+function Library:_BuildWatermark()
+    -- Default label: "Zenith Ui  |  <script title>"
+    local wmText = Library.Name .. "  |  " .. self.title
+
+    local wm = New("Frame", {
+        Name = "Watermark",
+        BackgroundColor3 = Color3.fromRGB(13, 13, 15),
+        BackgroundTransparency = 0.25,
+        BorderSizePixel = 0,
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.new(0, 0, 0, 24),
+        -- bottom-left corner
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 8, 1, -8),
+        ZIndex = 150,
+        Parent = self.screenGui,
+    })
+    Stroke(wm, Theme.Accent, 1, 0.5)
+    Padding(wm, 0, 0, 8, 8)
+
+    -- Accent left bar
+    New("Frame", {
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 2, 1, 0),
+        ZIndex = 151,
+        Parent = wm,
+    })
+
+    local wmLabel = New("TextLabel", {
+        FontFace = Font.Medium,
+        TextColor3 = Theme.Text,
+        Text = wmText,
+        BackgroundTransparency = 1,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextSize = TS.Small,
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.new(0, 0, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        ZIndex = 151,
+        Parent = wm,
+    })
+
+    -- Fade in
+    wm.BackgroundTransparency = 1
+    wmLabel.TextTransparency = 1
+    Tween(wm,      { BackgroundTransparency = 0.25 }, 0.4)
+    Tween(wmLabel, { TextTransparency = 0 },           0.4)
+
+    self._watermark      = wm
+    self._watermarkLabel = wmLabel
+    self._watermarkVisible = true
+    MakeDraggable(wm, wm)
+end
+
+-- Public API ──────────────────────────────────────────────────────────────────
+
+-- SetWatermarkText(text) → override the watermark string entirely
+function Library:SetWatermarkText(text)
+    if self._watermarkLabel then
+        self._watermarkLabel.Text = tostring(text)
+    end
+end
+
+-- SetWatermarkVisible(bool) → show / hide with fade
+function Library:SetWatermarkVisible(bool)
+    if not self._watermark then return end
+    self._watermarkVisible = bool
+    if bool then
+        self._watermark.Visible = true
+        Tween(self._watermark,      { BackgroundTransparency = 0.25 }, Anim.Normal)
+        Tween(self._watermarkLabel, { TextTransparency = 0 },           Anim.Normal)
+    else
+        Tween(self._watermark,      { BackgroundTransparency = 1 }, Anim.Normal)
+        Tween(self._watermarkLabel, { TextTransparency = 1 },       Anim.Normal)
+        task.delay(Anim.Normal + 0.05, function()
+            if not self._watermarkVisible and self._watermark then
+                self._watermark.Visible = false
+            end
+        end)
+    end
 end
 
 -- // ─── Controls (minimize / close / resize) ────────────────────────────────
@@ -878,6 +961,7 @@ function Library:Destroy()
     if self._autoSave then self:SaveConfig(self._currentConfig) end
     DisconnectAll()
     if self._acrylicBlur then self._acrylicBlur:Destroy() end
+    if self._watermark and self._watermark.Parent then self._watermark:Destroy() end
     if self.screenGui and self.screenGui.Parent then self.screenGui:Destroy() end
     if NotifContainer then NotifContainer=nil end
 end
@@ -886,6 +970,9 @@ end
 function Library:SetVisible(bool)
     self._visible=bool
     self.container.Visible=bool
+    if self._watermark then
+        self:SetWatermarkVisible(bool and self._watermarkVisible ~= false)
+    end
 end
 
 function Library:SetToggleKey(key)
@@ -1118,20 +1205,25 @@ function Library._CreateTab(section, name, icon, badge)
         Image=icon or "rbxassetid://112235310154264",ImageColor3=Theme.TextDark,
         AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,12,0.5,0),
         Size=UDim2.new(0,14,0,14),Parent=tf})
-    local textL=New("TextLabel",{FontFace=Font.Medium,TextColor3=Theme.TextDark,Text=name,
-        TextXAlignment=Enum.TextXAlignment.Left,BackgroundTransparency=1,
-        Position=UDim2.new(0,33,0,0),Size=UDim2.new(1,-46,1,0),
-        TextSize=TS.Small,Parent=tf})
-
+    -- Badge is built first so we know if it exists, then size text accordingly
     local badgeL=nil
+    local textRightPad = 12  -- default right padding when no badge
     if badge and badge~="" then
         badgeL=New("TextLabel",{FontFace=Font.Bold,TextColor3=Color3.new(1,1,1),
             Text=tostring(badge),BackgroundColor3=Theme.Accent,BorderSizePixel=0,
             AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-6,0.5,0),
             Size=UDim2.new(0,0,0,14),AutomaticSize=Enum.AutomaticSize.X,
             TextSize=9,ZIndex=2,Parent=tf})
-        Corner(badgeL,4); Padding(badgeL,0,0,3,3)
+        Corner(badgeL,0); Padding(badgeL,0,0,4,4)
+        textRightPad = 42  -- leave fixed space for badge (approx max badge width + gap)
     end
+
+    local textL=New("TextLabel",{FontFace=Font.Medium,TextColor3=Theme.TextDark,Text=name,
+        TextXAlignment=Enum.TextXAlignment.Left,BackgroundTransparency=1,
+        Position=UDim2.new(0,33,0,0),
+        Size=UDim2.new(1,-(33+textRightPad),1,0),
+        TextTruncate=Enum.TextTruncate.AtEnd,
+        TextSize=TS.Small,Parent=tf})
 
     local cBtn=New("TextButton",{Text="",BackgroundTransparency=1,
         Size=UDim2.new(1,0,1,0),Parent=tf})
@@ -1981,7 +2073,7 @@ function Library._CreateConfigSection(tab)
     Library._CreateContentSection(tab,"Device")
     Library._CreateLabel(tab,{Name="Type",  Value=Device.Detect()})
     Library._CreateLabel(tab,{Name="Size",  Value=tostring(math.floor(workspace.CurrentCamera.ViewportSize.X)).."x"..tostring(math.floor(workspace.CurrentCamera.ViewportSize.Y))})
-    Library._CreateLabel(tab,{Name="Version",Value="Acrylic v"..Library.Version})
+    Library._CreateLabel(tab,{Name="Version",Value="Zenith Ui v"..Library.Version})
 
     return {RefreshConfigs=function() drop:Refresh(lib:GetConfigs()) end}
 end
