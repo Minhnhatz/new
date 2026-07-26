@@ -358,16 +358,14 @@ local function EnsureNotifContainer(sGui)
     if NotifContainer and NotifContainer.Parent then return NotifContainer end
     NotifContainer=New("Frame",{
         Name="NotifContainer",BackgroundTransparency=1,
-        Position=UDim2.new(1,-276,1,-16),
-        AnchorPoint=Vector2.new(0,1),
+        Position=UDim2.new(1,-276,0,16),
         Size=UDim2.new(0,260,1,-32),
         Parent=sGui,
     })
-    local ncList=New("UIListLayout",{
+    New("UIListLayout",{
         Padding=UDim.new(0,6),
         SortOrder=Enum.SortOrder.LayoutOrder,
         FillDirection=Enum.FillDirection.Vertical,
-        VerticalAlignment=Enum.VerticalAlignment.Bottom,
         Parent=NotifContainer,
     })
     return NotifContainer
@@ -391,19 +389,19 @@ local function FireNotify(sGui, cfg)
         Parent=NotifContainer,
     })
 
-    -- Card (the visible notif) — square corners, slide-up animation
+    -- Card (the visible notif) — square corners, slide-in from right
     local card=New("Frame",{
         Name="Card",
         BackgroundColor3=Color3.fromRGB(16,16,20),
         BorderSizePixel=0,
-        -- Start: below + invisible (old-style slide up)
-        Position=UDim2.new(0,0,0,Size.Notif.Height+10),
+        -- Start: off-screen to the right
+        Position=UDim2.new(0,Size.Notif.Width+24,0,0),
         Size=UDim2.new(1,0,0,Size.Notif.Height),
         BackgroundTransparency=1,
         ClipsDescendants=true,
         Parent=wrapper,
     })
-    -- NO Corner() here → square notif
+    -- NO Corner() → square notif
     local cardStroke=Stroke(card,accent,1,0.4)
 
     -- Glow left bar (accent color) — square
@@ -480,11 +478,10 @@ local function FireNotify(sGui, cfg)
         Parent=card,
     })
 
-    -- ── Animate IN (old-style: slide up from below) ─────────────────────────
-    -- Step 1: slide up + fade in
+    -- ── Animate IN: slide in from right ────────────────────────────────────
     Tween(card,{Position=UDim2.new(0,0,0,0), BackgroundTransparency=0},
-        0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    Tween(cardStroke,{Transparency=0}, 0.25)
+        0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    Tween(cardStroke,{Transparency=0}, 0.3)
 
     -- Step 3: timer drain
     Tween(timerFill,{Size=UDim2.new(0,0,1,0)}, duration, Enum.EasingStyle.Linear)
@@ -493,8 +490,8 @@ local function FireNotify(sGui, cfg)
     local closed=false
     local function Close()
         if closed then return end; closed=true
-        Tween(card,{Position=UDim2.new(0,0,0,Size.Notif.Height+10),BackgroundTransparency=1},
-            0.22,Enum.EasingStyle.Quint,Enum.EasingDirection.In)
+        Tween(card,{Position=UDim2.new(0,Size.Notif.Width+24,0,0),BackgroundTransparency=1},
+            0.25,Enum.EasingStyle.Quint,Enum.EasingDirection.In)
         Tween(cardStroke,{Transparency=1},0.28)
         task.delay(0.32,function()
             Tween(wrapper,{Size=UDim2.new(1,0,0,0)},0.18,Enum.EasingStyle.Quint)
@@ -1634,70 +1631,275 @@ function Library._CreateDropdown(tab, cfg)
     local multiSel=cfg.MultiSelect or false
     local maxVis  =cfg.MaxVisible  or 5
     local cb      =cfg.Callback    or function() end
-    local selected=cfg.Default     or (multiSel and {} or (options[1] or ""))
     local expanded=false
 
+    -- selected: string (single) or table of strings (multi)
+    local selected
+    if multiSel then
+        selected = type(cfg.Default)=="table" and cfg.Default or {}
+    else
+        selected = cfg.Default or (options[1] or "")
+    end
+
+    -- ── Outer frame ──────────────────────────────────────────────────────────
+    local frameH = multiSel and 48 or 38   -- taller when multi to show pills
     local frame=New("Frame",{Name="DD_"..name,BackgroundColor3=Theme.Secondary,
         BackgroundTransparency=0.4,BorderSizePixel=0,
-        Size=UDim2.new(1,0,0,38),ZIndex=1,Parent=tab.content})
+        Size=UDim2.new(1,0,0,frameH),ZIndex=1,Parent=tab.content})
     Corner(frame); Stroke(frame)
+
     New("TextLabel",{FontFace=Font.Medium,TextColor3=Theme.Text,Text=name,
         TextXAlignment=Enum.TextXAlignment.Left,BackgroundTransparency=1,
-        Position=UDim2.new(0,10,0.5,-9),TextSize=TS.Normal,
-        Size=UDim2.new(0.5,0,0,18),Parent=frame})
+        Position=UDim2.new(0,10,0,0),Size=UDim2.new(0.45,0,0,frameH),
+        TextSize=TS.Normal,Parent=frame})
 
+    -- ── Selection display box ─────────────────────────────────────────────────
     local selDisp=New("Frame",{BackgroundColor3=Theme.Tertiary,BackgroundTransparency=0.1,
         AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-10,0.5,0),
-        BorderSizePixel=0,Size=UDim2.new(0,138,0,24),ZIndex=2,Parent=frame})
+        BorderSizePixel=0,Size=UDim2.new(0,138,0,multiSel and 36 or 24),ZIndex=2,Parent=frame})
     Corner(selDisp,5); Stroke(selDisp)
-    local selLbl=New("TextLabel",{FontFace=Font.Regular,TextColor3=Theme.Text,
-        Text="",TextXAlignment=Enum.TextXAlignment.Left,BackgroundTransparency=1,
-        TextSize=TS.Small,TextTruncate=Enum.TextTruncate.AtEnd,
-        Position=UDim2.new(0,6,0,0),Size=UDim2.new(1,-20,1,0),ZIndex=2,Parent=selDisp})
+
+    -- Single mode: plain text label
+    local selLbl = nil
+    -- Multi mode: scrolling pills row + count badge
+    local pillsScroll, countBadge = nil, nil
+
+    if not multiSel then
+        selLbl=New("TextLabel",{FontFace=Font.Regular,TextColor3=Theme.Text,
+            Text=tostring(selected),TextXAlignment=Enum.TextXAlignment.Left,
+            BackgroundTransparency=1,TextSize=TS.Small,
+            TextTruncate=Enum.TextTruncate.AtEnd,
+            Position=UDim2.new(0,6,0,0),Size=UDim2.new(1,-20,1,0),
+            ZIndex=2,Parent=selDisp})
+    else
+        -- Pills container (horizontal scroll)
+        pillsScroll=New("ScrollingFrame",{
+            BackgroundTransparency=1,BorderSizePixel=0,
+            Position=UDim2.new(0,4,0,4),
+            Size=UDim2.new(1,-24,1,-8),
+            CanvasSize=UDim2.new(0,0,0,0),
+            AutomaticCanvasSize=Enum.AutomaticSize.X,
+            ScrollBarThickness=0,
+            ScrollingDirection=Enum.ScrollingDirection.X,
+            ZIndex=2,Parent=selDisp})
+        New("UIListLayout",{
+            FillDirection=Enum.FillDirection.Horizontal,
+            Padding=UDim.new(0,3),
+            SortOrder=Enum.SortOrder.LayoutOrder,
+            VerticalAlignment=Enum.VerticalAlignment.Center,
+            Parent=pillsScroll})
+        -- Count badge (shown when pills overflow)
+        countBadge=New("TextLabel",{FontFace=Font.Bold,TextColor3=Theme.Accent,
+            Text="",BackgroundTransparency=1,TextSize=TS.Tiny,
+            AnchorPoint=Vector2.new(1,0.5),
+            Position=UDim2.new(1,-2,0.5,0),
+            Size=UDim2.new(0,18,0,18),
+            ZIndex=3,Parent=selDisp})
+    end
+
     local arrow=New("ImageLabel",{BackgroundTransparency=1,
         Image="rbxassetid://105558791071013",ImageColor3=Theme.TextDark,Rotation=0,
-        AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-6,0.5,0),
-        Size=UDim2.new(0,10,0,10),ZIndex=2,Parent=selDisp})
+        AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-4,0.5,0),
+        Size=UDim2.new(0,10,0,10),ZIndex=3,Parent=selDisp})
 
-    local opH=math.min(#options,maxVis)*30
+    -- ── Rebuild pills (multi only) ────────────────────────────────────────────
+    local function RebuildPills()
+        if not multiSel or not pillsScroll then return end
+        for _,c in ipairs(pillsScroll:GetChildren()) do
+            if not c:IsA("UIListLayout") then c:Destroy() end
+        end
+        if #selected == 0 then
+            local ph=New("TextLabel",{FontFace=Font.Regular,TextColor3=Theme.TextDark,
+                Text="None",BackgroundTransparency=1,TextSize=TS.Small,
+                Size=UDim2.new(0,30,1,0),ZIndex=2,Parent=pillsScroll})
+        else
+            for _,item in ipairs(selected) do
+                local pill=New("Frame",{BackgroundColor3=Theme.Accent,
+                    BackgroundTransparency=0.7,BorderSizePixel=0,
+                    AutomaticSize=Enum.AutomaticSize.X,
+                    Size=UDim2.new(0,0,0,18),ZIndex=2,Parent=pillsScroll})
+                Corner(pill,4); Padding(pill,0,0,5,5)
+                New("TextLabel",{FontFace=Font.Medium,TextColor3=Theme.Text,
+                    Text=item,BackgroundTransparency=1,TextSize=9,
+                    AutomaticSize=Enum.AutomaticSize.X,
+                    Size=UDim2.new(0,0,1,0),ZIndex=3,Parent=pill})
+            end
+        end
+        countBadge.Text = #selected > 0 and tostring(#selected) or ""
+    end
+
+    -- ── Options dropdown panel ────────────────────────────────────────────────
+    local optRowH = multiSel and 28 or 30
+    local headerH = multiSel and 28 or 0   -- "Select All / Clear" header
+    local opH = math.min(#options, maxVis) * optRowH + headerH
+
     local optsCont=New("Frame",{BackgroundColor3=Theme.Secondary,BorderSizePixel=0,
         AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-10,1,4),
-        Size=UDim2.new(0,138,0,opH),Visible=false,ZIndex=100,ClipsDescendants=true,Parent=frame})
+        Size=UDim2.new(0,138,0,opH),Visible=false,ZIndex=100,
+        ClipsDescendants=true,Parent=frame})
     Corner(optsCont,6); Stroke(optsCont)
+
+    -- Multi: Select All / Clear header bar
+    local optBodyOffset = 0
+    if multiSel then
+        optBodyOffset = headerH
+        local hdr=New("Frame",{BackgroundColor3=Theme.Tertiary,BackgroundTransparency=0.5,
+            BorderSizePixel=0,Size=UDim2.new(1,0,0,headerH),ZIndex=101,Parent=optsCont})
+
+        local allBtn=New("TextButton",{FontFace=Font.Medium,Text="All",
+            TextColor3=Theme.Accent,BackgroundTransparency=1,BorderSizePixel=0,
+            TextSize=TS.Tiny,Size=UDim2.new(0.5,0,1,0),ZIndex=102,Parent=hdr})
+        local clrBtn=New("TextButton",{FontFace=Font.Medium,Text="Clear",
+            TextColor3=Theme.TextDark,BackgroundTransparency=1,BorderSizePixel=0,
+            TextSize=TS.Tiny,Position=UDim2.new(0.5,0,0,0),
+            Size=UDim2.new(0.5,0,1,0),ZIndex=102,Parent=hdr})
+
+        New("Frame",{BackgroundColor3=Theme.Border,BorderSizePixel=0,
+            Position=UDim2.new(0.5,0,0.1,0),Size=UDim2.new(0,1,0.8,0),
+            ZIndex=102,Parent=hdr})
+
+        allBtn.MouseButton1Click:Connect(function()
+            selected={}
+            for _,o in ipairs(options) do table.insert(selected,o) end
+            RebuildPills()
+            -- refresh checkboxes
+            for _,c in ipairs(optsCont:GetChildren()) do
+                if c.Name=="OptRow" then
+                    local chk=c:FindFirstChild("Chk")
+                    if chk then chk.BackgroundColor3=Theme.Accent; chk.BackgroundTransparency=0 end
+                    local chkMark=chk and chk:FindFirstChild("Mark")
+                    if chkMark then chkMark.Visible=true end
+                end
+            end
+            if lib then lib:_SetFlagInternal(cfg.Flag,selected) end; cb(selected)
+        end)
+        clrBtn.MouseButton1Click:Connect(function()
+            selected={}
+            RebuildPills()
+            for _,c in ipairs(optsCont:GetChildren()) do
+                if c.Name=="OptRow" then
+                    local chk=c:FindFirstChild("Chk")
+                    if chk then chk.BackgroundColor3=Theme.Tertiary; chk.BackgroundTransparency=0.1 end
+                    local chkMark=chk and chk:FindFirstChild("Mark")
+                    if chkMark then chkMark.Visible=false end
+                end
+            end
+            if lib then lib:_SetFlagInternal(cfg.Flag,selected) end; cb(selected)
+        end)
+
+        -- divider under header
+        New("Frame",{BackgroundColor3=Theme.Border,BorderSizePixel=0,
+            Position=UDim2.new(0,0,0,headerH-1),Size=UDim2.new(1,0,0,1),
+            ZIndex=101,Parent=optsCont})
+    end
+
     local optsScroll=New("ScrollingFrame",{BackgroundTransparency=1,BorderSizePixel=0,
-        Size=UDim2.new(1,0,1,0),CanvasSize=UDim2.new(0,0,0,#options*30),
+        Position=UDim2.new(0,0,0,optBodyOffset),
+        Size=UDim2.new(1,0,1,-optBodyOffset),
+        CanvasSize=UDim2.new(0,0,0,#options*optRowH),
         ScrollBarThickness=3,ScrollBarImageColor3=Color3.fromRGB(60,60,72),
         ZIndex=100,Parent=optsCont})
     List(optsScroll,0)
 
-    local function UpdateText()
-        selLbl.Text=multiSel and (#selected>0 and table.concat(selected,", ") or "None") or tostring(selected)
+    -- ── Build option rows ─────────────────────────────────────────────────────
+    local optRows = {}  -- {row, chk, chkMark} per option for refresh
+
+    local function IsSelected(opt)
+        if multiSel then return table.find(selected,opt)~=nil
+        else return selected==opt end
     end
 
     local function MakeOpt(opt)
-        local ob=New("TextButton",{Name=opt,FontFace=Font.Regular,TextColor3=Theme.Text,
-            Text=opt,BackgroundTransparency=1,BorderSizePixel=0,TextSize=TS.Small,
-            Size=UDim2.new(1,0,0,30),ZIndex=100,Parent=optsScroll})
-        Padding(ob,0,0,8,0)
-        ob.MouseEnter:Connect(function() Tween(ob,{BackgroundTransparency=0.5,TextColor3=Theme.Accent},Anim.Fast) end)
-        ob.MouseLeave:Connect(function() Tween(ob,{BackgroundTransparency=1,TextColor3=Theme.Text},Anim.Fast) end)
-        ob.MouseButton1Click:Connect(function()
+        local ob=New("Frame",{Name="OptRow",BackgroundTransparency=1,BorderSizePixel=0,
+            Size=UDim2.new(1,0,0,optRowH),ZIndex=100,Parent=optsScroll})
+
+        local btn=New("TextButton",{Text="",BackgroundTransparency=1,BorderSizePixel=0,
+            Size=UDim2.new(1,0,1,0),ZIndex=101,Parent=ob})
+
+        -- Checkbox (multi only)
+        local chk, chkMark = nil, nil
+        if multiSel then
+            local isSel = IsSelected(opt)
+            chk=New("Frame",{Name="Chk",
+                BackgroundColor3=isSel and Theme.Accent or Theme.Tertiary,
+                BackgroundTransparency=isSel and 0 or 0.1,
+                BorderSizePixel=0,
+                AnchorPoint=Vector2.new(0,0.5),
+                Position=UDim2.new(0,8,0.5,0),
+                Size=UDim2.new(0,12,0,12),ZIndex=102,Parent=ob})
+            Corner(chk,3)
+            Stroke(chk, isSel and Theme.Accent or Theme.Border, 1)
+            chkMark=New("TextLabel",{Text="✓",FontFace=Font.Bold,
+                TextColor3=Color3.new(1,1,1),BackgroundTransparency=1,
+                TextSize=9,Size=UDim2.new(1,0,1,0),Visible=isSel,
+                ZIndex=103,Parent=chk})
+        end
+
+        -- Label
+        local xOff = multiSel and 26 or 8
+        local lbl=New("TextLabel",{FontFace=Font.Regular,
+            TextColor3=IsSelected(opt) and Theme.Accent or Theme.Text,
+            Text=opt,BackgroundTransparency=1,BorderSizePixel=0,
+            TextXAlignment=Enum.TextXAlignment.Left,TextSize=TS.Small,
+            Position=UDim2.new(0,xOff,0,0),Size=UDim2.new(1,-(xOff+4),1,0),
+            TextTruncate=Enum.TextTruncate.AtEnd,
+            ZIndex=102,Parent=ob})
+
+        -- Hover
+        btn.MouseEnter:Connect(function()
+            Tween(ob,{BackgroundTransparency=0.7},Anim.Fast)
+            ob.BackgroundColor3=Theme.Border
+        end)
+        btn.MouseLeave:Connect(function()
+            Tween(ob,{BackgroundTransparency=1},Anim.Fast)
+        end)
+
+        btn.MouseButton1Click:Connect(function()
             if multiSel then
                 local idx=table.find(selected,opt)
-                if idx then table.remove(selected,idx) else table.insert(selected,opt) end
-                UpdateText(); if lib then lib:_SetFlagInternal(cfg.Flag,selected) end; cb(selected)
-            else
-                selected=opt; UpdateText()
+                if idx then
+                    table.remove(selected,idx)
+                    if chk then
+                        Tween(chk,{BackgroundColor3=Theme.Tertiary,BackgroundTransparency=0.1},Anim.Fast)
+                        Stroke(chk,Theme.Border,1)
+                        if chkMark then chkMark.Visible=false end
+                    end
+                    Tween(lbl,{TextColor3=Theme.Text},Anim.Fast)
+                else
+                    table.insert(selected,opt)
+                    if chk then
+                        Tween(chk,{BackgroundColor3=Theme.Accent,BackgroundTransparency=0},Anim.Fast)
+                        Stroke(chk,Theme.Accent,1)
+                        if chkMark then chkMark.Visible=true end
+                    end
+                    Tween(lbl,{TextColor3=Theme.Accent},Anim.Fast)
+                end
+                RebuildPills()
                 if lib then lib:_SetFlagInternal(cfg.Flag,selected) end; cb(selected)
+            else
+                -- deselect old
+                for _,r in ipairs(optRows) do
+                    if r.lbl then Tween(r.lbl,{TextColor3=Theme.Text},Anim.Fast) end
+                    if r.row then Tween(r.row,{BackgroundTransparency=1},Anim.Fast) end
+                end
+                selected=opt
+                Tween(lbl,{TextColor3=Theme.Accent},Anim.Fast)
+                if selLbl then selLbl.Text=opt end
                 expanded=false; optsCont.Visible=false
                 Tween(arrow,{Rotation=0},Anim.Normal); frame.ZIndex=1
+                if lib then lib:_SetFlagInternal(cfg.Flag,selected) end; cb(selected)
             end
         end)
-    end
-    for _,o in ipairs(options) do MakeOpt(o) end
-    UpdateText()
 
-    New("TextButton",{Text="",BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=3,Parent=selDisp})
+        table.insert(optRows,{row=ob, lbl=lbl, chk=chk, chkMark=chkMark, opt=opt})
+    end
+
+    for _,o in ipairs(options) do MakeOpt(o) end
+    if multiSel then RebuildPills() end
+
+    -- ── Toggle open/close ─────────────────────────────────────────────────────
+    New("TextButton",{Text="",BackgroundTransparency=1,
+        Size=UDim2.new(1,0,1,0),ZIndex=3,Parent=selDisp})
         .MouseButton1Click:Connect(function()
         expanded=not expanded; optsCont.Visible=expanded
         Tween(arrow,{Rotation=expanded and 180 or 0},Anim.Normal)
@@ -1707,10 +1909,28 @@ function Library._CreateDropdown(tab, cfg)
     local sGui=frame:FindFirstAncestorOfClass("ScreenGui")
     if cfg.Tooltip and sGui then MakeTooltip(frame,cfg.Tooltip,sGui) end
 
+    -- ── SetValue ──────────────────────────────────────────────────────────────
     local function SetValue(v)
-        if multiSel and type(v)=="table" then selected=v
-        elseif not multiSel then selected=v end
-        UpdateText()
+        if multiSel and type(v)=="table" then
+            selected=v
+            -- sync checkboxes
+            for _,r in ipairs(optRows) do
+                local isSel=table.find(selected,r.opt)~=nil
+                if r.chk then
+                    r.chk.BackgroundColor3=isSel and Theme.Accent or Theme.Tertiary
+                    r.chk.BackgroundTransparency=isSel and 0 or 0.1
+                end
+                if r.chkMark then r.chkMark.Visible=isSel end
+                if r.lbl then r.lbl.TextColor3=isSel and Theme.Accent or Theme.Text end
+            end
+            RebuildPills()
+        elseif not multiSel then
+            selected=v
+            if selLbl then selLbl.Text=tostring(v) end
+            for _,r in ipairs(optRows) do
+                if r.lbl then r.lbl.TextColor3=(r.opt==v and Theme.Accent or Theme.Text) end
+            end
+        end
         if lib then lib:_SetFlagInternal(cfg.Flag,selected) end
         cb(selected)
     end
@@ -1724,14 +1944,15 @@ function Library._CreateDropdown(tab, cfg)
         SetValue=function(_,v) SetValue(v); return _ end,
         GetValue=function() return selected end,
         Refresh =function(_,newOpts)
-            options=newOpts
+            options=newOpts; optRows={}
             for _,c in ipairs(optsScroll:GetChildren()) do
-                if c:IsA("TextButton") then c:Destroy() end
+                if c:IsA("Frame") then c:Destroy() end
             end
             for _,o in ipairs(options) do MakeOpt(o) end
-            optsScroll.CanvasSize=UDim2.new(0,0,0,#options*30)
-            local nH=math.min(#options*30,maxVis*30)
+            optsScroll.CanvasSize=UDim2.new(0,0,0,#options*optRowH)
+            local nH=math.min(#options,maxVis)*optRowH+headerH
             optsCont.Size=UDim2.new(0,138,0,nH)
+            if multiSel then RebuildPills() end
             return _
         end,
     })
