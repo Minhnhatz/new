@@ -122,6 +122,95 @@ local TS = { Title=14, Normal=13, Small=12, Tiny=11 }
 -- // ─── Animation ────────────────────────────────────────────────────────────
 local Anim = { Fast=0.08, Normal=0.14, Slow=0.22, VerySlow=0.32 }
 
+-- // ─── Language Packs ───────────────────────────────────────────────────────
+local Languages = {
+    English = {
+        Save="Save Config", Load="Load Config", Delete="Delete Config",
+        Refresh="Refresh List", AutoSave="Auto Save (30s)",
+        ConfigName="Config Name", SelectConfig="Select Config",
+        AccentPreset="Accent Preset", Device="Device", Version="Version",
+        Theme="Theme", Configuration="Configuration",
+        Settings="Settings", Background="Background Image URL",
+        Font="Font", Language="Language",
+        BgPreview="Preview", BgClear="Clear Background",
+        BgApply="Apply Background",
+        ConfirmDelete="Delete", ConfirmDeleteDesc="This cannot be undone.",
+        Saved="Saved", SaveFail="Save Failed", LoadFail="Load Failed",
+        ThemeUpdated="Theme Updated", AccentChanged="Accent color changed",
+        Refreshed="Refreshed", ConfigListUpdated="Config list updated",
+        LayoutAdjusted="Layout Adjusted", SwitchedTo="Switched to",
+        Watermark="Watermark",
+    },
+    Vietnamese = {
+        Save="Lưu Config", Load="Tải Config", Delete="Xoá Config",
+        Refresh="Làm mới danh sách", AutoSave="Tự lưu (30 giây)",
+        ConfigName="Tên Config", SelectConfig="Chọn Config",
+        AccentPreset="Màu Accent", Device="Thiết bị", Version="Phiên bản",
+        Theme="Giao diện", Configuration="Cấu hình",
+        Settings="Cài đặt", Background="URL ảnh nền",
+        Font="Phông chữ", Language="Ngôn ngữ",
+        BgPreview="Xem trước", BgClear="Xoá ảnh nền",
+        BgApply="Áp dụng ảnh nền",
+        ConfirmDelete="Xoá", ConfirmDeleteDesc="Hành động này không thể hoàn tác.",
+        Saved="Đã lưu", SaveFail="Lưu thất bại", LoadFail="Tải thất bại",
+        ThemeUpdated="Đã cập nhật giao diện", AccentChanged="Đã đổi màu accent",
+        Refreshed="Đã làm mới", ConfigListUpdated="Danh sách config đã cập nhật",
+        LayoutAdjusted="Đã điều chỉnh bố cục", SwitchedTo="Chuyển sang",
+        Watermark="Hình mờ",
+    },
+    Japanese = {
+        Save="保存", Load="読込", Delete="削除",
+        Refresh="一覧更新", AutoSave="自動保存 (30秒)",
+        ConfigName="設定名", SelectConfig="設定選択",
+        AccentPreset="アクセント", Device="デバイス", Version="バージョン",
+        Theme="テーマ", Configuration="設定",
+        Settings="オプション", Background="背景URL",
+        Font="フォント", Language="言語",
+        BgPreview="プレビュー", BgClear="背景削除",
+        BgApply="背景適用",
+        ConfirmDelete="削除", ConfirmDeleteDesc="この操作は元に戻せません。",
+        Saved="保存済み", SaveFail="保存失敗", LoadFail="読込失敗",
+        ThemeUpdated="テーマ更新", AccentChanged="アクセント変更",
+        Refreshed="更新済み", ConfigListUpdated="一覧を更新しました",
+        LayoutAdjusted="レイアウト調整", SwitchedTo="切替:",
+        Watermark="ウォーターマーク",
+    },
+    Chinese = {
+        Save="保存配置", Load="加载配置", Delete="删除配置",
+        Refresh="刷新列表", AutoSave="自动保存 (30秒)",
+        ConfigName="配置名称", SelectConfig="选择配置",
+        AccentPreset="主题色", Device="设备", Version="版本",
+        Theme="主题", Configuration="配置管理",
+        Settings="设置", Background="背景图片链接",
+        Font="字体", Language="语言",
+        BgPreview="预览", BgClear="清除背景",
+        BgApply="应用背景",
+        ConfirmDelete="删除", ConfirmDeleteDesc="此操作无法撤销。",
+        Saved="已保存", SaveFail="保存失败", LoadFail="加载失败",
+        ThemeUpdated="主题已更新", AccentChanged="主题色已更改",
+        Refreshed="已刷新", ConfigListUpdated="配置列表已更新",
+        LayoutAdjusted="布局已调整", SwitchedTo="切换至",
+        Watermark="水印",
+    },
+}
+local CurrentLang = "English"
+local function L(key) return (Languages[CurrentLang] or Languages.English)[key] or key end
+
+-- // ─── Font Registry ────────────────────────────────────────────────────────
+local FontRegistry = {
+    { name="Gotham",       regular=Font.new("rbxasset://fonts/families/GothamSSm.json",    Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/GothamSSm.json",    Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/GothamSSm.json",    Enum.FontWeight.Bold) },
+    { name="Ubuntu",       regular=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Bold) },
+    { name="Montserrat",   regular=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Bold) },
+    { name="Source Sans",  regular=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold) },
+    { name="Roboto Mono",  regular=Font.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Bold) },
+    { name="Nunito",       regular=Font.new("rbxasset://fonts/families/Nunito.json",         Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/Nunito.json",         Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/Nunito.json",         Enum.FontWeight.Bold) },
+}
+local function ApplyFont(entry)
+    Font.Regular = entry.regular
+    Font.Medium  = entry.medium
+    Font.Bold    = entry.bold
+end
+
 -- // ─── Notify Icons per type ───────────────────────────────────────────────
 local NotifIcons = {
     Info    = "rbxassetid://10709775704",
@@ -690,6 +779,16 @@ function Library:_Build()
     })
     Corner(self.container,8); Stroke(self.container,Theme.Border,1)
 
+    -- Background image/gif layer (hidden by default, sits below everything)
+    self._bgLayer = New("ImageLabel",{
+        Name="BgLayer", BackgroundTransparency=1,
+        Image="", ImageTransparency=0.15,
+        ScaleType=Enum.ScaleType.Crop,
+        Size=UDim2.new(1,0,1,0), ZIndex=0,
+        Visible=false, Parent=self.container,
+    })
+    Corner(self._bgLayer, 8)
+
     self.topBar=New("Frame",{
         Name="TopBar",BackgroundTransparency=1,
         Size=UDim2.new(1,0,0,44),Parent=self.container,
@@ -1034,6 +1133,53 @@ function Library:SetAccentColor(color)
     Theme.Accent=color; Theme.Info=color
     Theme.Toggle.Enabled=color
     self:Notify({Title="Theme Updated",Description="Accent color changed",Duration=2,Type="Info"})
+end
+
+-- // ─── Background Image/GIF ────────────────────────────────────────────────
+function Library:SetBackground(url, transparency)
+    if not self._bgLayer then return end
+    -- Accept full https:// URL or rbxassetid://
+    local img = url
+    if url:sub(1,8)=="https://" or url:sub(1,7)=="http://" then
+        -- Roblox ImageLabel supports direct https image URLs on some executors
+        img = url
+    end
+    self._bgLayer.Image = img
+    self._bgLayer.ImageTransparency = transparency or 0.15
+    self._bgLayer.Visible = img ~= ""
+    Tween(self._bgLayer, {ImageTransparency = transparency or 0.15}, Anim.Slow)
+end
+
+function Library:ClearBackground()
+    if not self._bgLayer then return end
+    Tween(self._bgLayer, {ImageTransparency=1}, Anim.Normal)
+    task.delay(Anim.Normal+0.05, function()
+        if self._bgLayer then
+            self._bgLayer.Image=""
+            self._bgLayer.Visible=false
+        end
+    end)
+end
+
+-- // ─── Font ─────────────────────────────────────────────────────────────────
+function Library:SetFont(fontName)
+    for _, entry in ipairs(FontRegistry) do
+        if entry.name == fontName then
+            ApplyFont(entry)
+            self:Notify({Title=L("Theme"), Description="Font → "..fontName, Duration=2, Type="Info"})
+            return
+        end
+    end
+    Warn("Font '%s' not found in registry", fontName)
+end
+
+-- // ─── Language ─────────────────────────────────────────────────────────────
+function Library:SetLanguage(lang)
+    if not Languages[lang] then
+        Warn("Language '%s' not found", lang); return
+    end
+    CurrentLang = lang
+    self:Notify({Title=L("Settings"), Description="Language → "..lang, Duration=2, Type="Info"})
 end
 
 -- // ─── Config Save/Load ─────────────────────────────────────────────────────
@@ -2234,45 +2380,48 @@ end
 -- // ─── Config Section ───────────────────────────────────────────────────────
 function Library._CreateConfigSection(tab)
     local lib=tab._library
-    Library._CreateContentSection(tab,"Configuration")
 
-    local nameBox=Library._CreateTextBox(tab,{Name="Config Name",Default="default",
+    -- ── Configuration ────────────────────────────────────────────────────────
+    Library._CreateContentSection(tab, L("Configuration"))
+
+    local nameBox=Library._CreateTextBox(tab,{Name=L("ConfigName"),Default="default",
         Placeholder="config name…",Callback=function(t) lib._currentConfig=t end})
-    local drop; drop=Library._CreateDropdown(tab,{Name="Select Config",
+    local drop; drop=Library._CreateDropdown(tab,{Name=L("SelectConfig"),
         Options=lib:GetConfigs(),Default="default",
         Callback=function(sel) nameBox:SetText(sel); lib._currentConfig=sel end})
-    Library._CreateButton(tab,{Name="Save Config",Callback=function()
+    Library._CreateButton(tab,{Name=L("Save"),Callback=function()
         local n=nameBox:GetText()
         if n~="" then lib:SaveConfig(n); drop:Refresh(lib:GetConfigs()) end
     end})
-    Library._CreateButton(tab,{Name="Load Config",Callback=function()
+    Library._CreateButton(tab,{Name=L("Load"),Callback=function()
         local n=nameBox:GetText(); if n~="" then lib:LoadConfig(n) end
     end})
-    Library._CreateButton(tab,{Name="Delete Config",Tooltip="Permanently removes the config file",
+    Library._CreateButton(tab,{Name=L("Delete"),Tooltip=L("ConfirmDeleteDesc"),
         Callback=function()
             local n=nameBox:GetText()
             if n~="" then
                 lib:Confirm({
-                    Title="Delete '"..n.."'?",
-                    Description="This cannot be undone.",
-                    YesLabel="Delete",YesType="Error",
+                    Title=L("ConfirmDelete").." '"..n.."'?",
+                    Description=L("ConfirmDeleteDesc"),
+                    YesLabel=L("ConfirmDelete"),YesType="Error",
                     OnYes=function()
                         lib:DeleteConfig(n); drop:Refresh(lib:GetConfigs())
                     end,
                 })
             end
-        end
-    })
-    Library._CreateButton(tab,{Name="Refresh List",Callback=function()
+        end})
+    Library._CreateButton(tab,{Name=L("Refresh"),Callback=function()
         drop:Refresh(lib:GetConfigs())
-        lib:Notify({Title="Refreshed",Description="Config list updated",Duration=2,Type="Success"})
+        lib:Notify({Title=L("Refreshed"),Description=L("ConfigListUpdated"),Duration=2,Type="Success"})
     end})
-    Library._CreateToggle(tab,{Name="Auto Save (30s)",Default=false,
+    Library._CreateToggle(tab,{Name=L("AutoSave"),Default=false,
         Tooltip="Saves current config every 30 seconds",
         Callback=function(en) lib:SetAutoSave(en) end})
 
+    -- ── Theme / Accent ────────────────────────────────────────────────────────
     Library._CreateDivider(tab)
-    Library._CreateContentSection(tab,"Theme")
+    Library._CreateContentSection(tab, L("Theme"))
+
     local presets={
         {name="Purple", color=Color3.fromRGB(124,106,252)},
         {name="Cyan",   color=Color3.fromRGB(80,210,230)},
@@ -2282,7 +2431,7 @@ function Library._CreateConfigSection(tab)
         {name="Pink",   color=Color3.fromRGB(240,100,180)},
     }
     local pNames={}; for _,p in ipairs(presets) do table.insert(pNames,p.name) end
-    Library._CreateDropdown(tab,{Name="Accent Preset",Options=pNames,Default="Purple",
+    Library._CreateDropdown(tab,{Name=L("AccentPreset"),Options=pNames,Default="Purple",
         Tooltip="Changes the global accent color",
         Callback=function(sel)
             for _,p in ipairs(presets) do
@@ -2290,11 +2439,65 @@ function Library._CreateConfigSection(tab)
             end
         end})
 
+    -- ── Background Image / GIF ────────────────────────────────────────────────
     Library._CreateDivider(tab)
-    Library._CreateContentSection(tab,"Device")
+    Library._CreateContentSection(tab, L("Background"))
+
+    -- Transparency slider (shown above URL box so user sets it before applying)
+    local bgTransSlider = Library._CreateSlider(tab,{
+        Name="Transparency", Min=0, Max=90, Default=15, Step=5, Suffix="%",
+        Tooltip="0 = fully opaque, 90 = nearly invisible",
+    })
+
+    local bgUrlBox = Library._CreateTextBox(tab,{
+        Name=L("Background"),
+        Placeholder="https://... or rbxassetid://...",
+        Default="",
+        Tooltip="Paste a direct image or GIF URL",
+    })
+
+    Library._CreateButton(tab,{Name=L("BgApply"), Callback=function()
+        local url  = bgUrlBox:GetText()
+        local transp = bgTransSlider:GetValue() / 100
+        if url ~= "" then
+            lib:SetBackground(url, transp)
+            lib:Notify({Title=L("BgApply"), Description="Background applied~", Duration=2, Type="Success"})
+        else
+            lib:Notify({Title="Error", Description="URL trống!", Duration=2, Type="Error"})
+        end
+    end})
+
+    Library._CreateButton(tab,{Name=L("BgClear"), Callback=function()
+        lib:ClearBackground()
+        bgUrlBox:SetText("")
+        lib:Notify({Title=L("BgClear"), Description="Background removed :3", Duration=2, Type="Info"})
+    end})
+
+    -- ── Font ──────────────────────────────────────────────────────────────────
+    Library._CreateDivider(tab)
+    Library._CreateContentSection(tab, L("Font"))
+
+    local fontNames={}; for _,f in ipairs(FontRegistry) do table.insert(fontNames,f.name) end
+    Library._CreateDropdown(tab,{Name=L("Font"), Options=fontNames, Default=fontNames[1],
+        Tooltip="Changes the UI font globally",
+        Callback=function(sel) lib:SetFont(sel) end})
+
+    -- ── Language ──────────────────────────────────────────────────────────────
+    Library._CreateDivider(tab)
+    Library._CreateContentSection(tab, L("Language"))
+
+    local langNames={}; for k in pairs(Languages) do table.insert(langNames,k) end
+    table.sort(langNames)
+    Library._CreateDropdown(tab,{Name=L("Language"), Options=langNames, Default=CurrentLang,
+        Tooltip="Changes UI language",
+        Callback=function(sel) lib:SetLanguage(sel) end})
+
+    -- ── Device Info ───────────────────────────────────────────────────────────
+    Library._CreateDivider(tab)
+    Library._CreateContentSection(tab, L("Device"))
     Library._CreateLabel(tab,{Name="Type",  Value=Device.Detect()})
     Library._CreateLabel(tab,{Name="Size",  Value=tostring(math.floor(workspace.CurrentCamera.ViewportSize.X)).."x"..tostring(math.floor(workspace.CurrentCamera.ViewportSize.Y))})
-    Library._CreateLabel(tab,{Name="Version",Value="Zenith Ui v"..Library.Version})
+    Library._CreateLabel(tab,{Name=L("Version"), Value="Zenith Ui v"..Library.Version})
 
     return {RefreshConfigs=function() drop:Refresh(lib:GetConfigs()) end}
 end
