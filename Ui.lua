@@ -112,14 +112,13 @@ end
 RebuildSize()
 
 -- // ─── Typography ───────────────────────────────────────────────────────────
--- FIX Bug 1: Renamed to `Fonts` to avoid shadowing the global Roblox `Font` constructor
--- before the table literal finishes evaluating.
-local Fonts = {
-    Regular = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular),
-    Medium  = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
-    Bold    = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold),
+-- Lưu Roblox Font constructor vào biến riêng trước khi khai báo local Font
+local _FontConstructor = Font
+local Font = {
+    Regular = _FontConstructor.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular),
+    Medium  = _FontConstructor.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
+    Bold    = _FontConstructor.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold),
 }
-local Font = Fonts  -- keep the short alias used everywhere else in the file
 local TS = { Title=14, Normal=13, Small=12, Tiny=11 }
 
 -- // ─── Animation ────────────────────────────────────────────────────────────
@@ -201,14 +200,12 @@ local function L(key) return (Languages[CurrentLang] or Languages.English)[key] 
 
 -- // ─── Font Registry ────────────────────────────────────────────────────────
 local FontRegistry = {
-    -- FIX Bug 1 (cont): FontRegistry is defined AFTER `local Font = Fonts`, so Font.new
-    -- here refers to the global Roblox Font constructor correctly.
-    { name="Gotham",       regular=Fonts.Regular, medium=Fonts.Medium, bold=Fonts.Bold },
-    { name="Ubuntu",       regular=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Bold) },
-    { name="Montserrat",   regular=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Bold) },
-    { name="Source Sans",  regular=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold) },
-    { name="Roboto Mono",  regular=Font.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Bold) },
-    { name="Nunito",       regular=Font.new("rbxasset://fonts/families/Nunito.json",         Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/Nunito.json",         Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/Nunito.json",         Enum.FontWeight.Bold) },
+    { name="Gotham",       regular=Font.Regular, medium=Font.Medium, bold=Font.Bold },
+    { name="Ubuntu",       regular=_FontConstructor.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Regular), medium=_FontConstructor.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Medium), bold=_FontConstructor.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Bold) },
+    { name="Montserrat",   regular=_FontConstructor.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Regular), medium=_FontConstructor.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Medium), bold=_FontConstructor.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Bold) },
+    { name="Source Sans",  regular=_FontConstructor.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular), medium=_FontConstructor.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Medium), bold=_FontConstructor.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold) },
+    { name="Roboto Mono",  regular=_FontConstructor.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Regular), medium=_FontConstructor.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Medium), bold=_FontConstructor.new("rbxasset://fonts/families/RobotoMono.json",    Enum.FontWeight.Bold) },
+    { name="Nunito",       regular=_FontConstructor.new("rbxasset://fonts/families/Nunito.json",        Enum.FontWeight.Regular), medium=_FontConstructor.new("rbxasset://fonts/families/Nunito.json",        Enum.FontWeight.Medium), bold=_FontConstructor.new("rbxasset://fonts/families/Nunito.json",        Enum.FontWeight.Bold) },
 }
 local function ApplyFont(entry)
     Font.Regular = entry.regular
