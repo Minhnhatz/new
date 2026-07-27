@@ -112,11 +112,14 @@ end
 RebuildSize()
 
 -- // ─── Typography ───────────────────────────────────────────────────────────
-local Font = {
+-- FIX Bug 1: Renamed to `Fonts` to avoid shadowing the global Roblox `Font` constructor
+-- before the table literal finishes evaluating.
+local Fonts = {
     Regular = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular),
     Medium  = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
     Bold    = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold),
 }
+local Font = Fonts  -- keep the short alias used everywhere else in the file
 local TS = { Title=14, Normal=13, Small=12, Tiny=11 }
 
 -- // ─── Animation ────────────────────────────────────────────────────────────
@@ -198,7 +201,9 @@ local function L(key) return (Languages[CurrentLang] or Languages.English)[key] 
 
 -- // ─── Font Registry ────────────────────────────────────────────────────────
 local FontRegistry = {
-    { name="Gotham",       regular=Font.new("rbxasset://fonts/families/GothamSSm.json",    Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/GothamSSm.json",    Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/GothamSSm.json",    Enum.FontWeight.Bold) },
+    -- FIX Bug 1 (cont): FontRegistry is defined AFTER `local Font = Fonts`, so Font.new
+    -- here refers to the global Roblox Font constructor correctly.
+    { name="Gotham",       regular=Fonts.Regular, medium=Fonts.Medium, bold=Fonts.Bold },
     { name="Ubuntu",       regular=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/Ubuntu.json",        Enum.FontWeight.Bold) },
     { name="Montserrat",   regular=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/Montserrat.json",    Enum.FontWeight.Bold) },
     { name="Source Sans",  regular=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular), medium=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Medium), bold=Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold) },
@@ -1613,6 +1618,8 @@ function Library._CreateSlider(tab, cfg)
     local suf =cfg.Suffix or ""
     local cb  =cfg.Callback or function() end
     local curVal=math.clamp(cfg.Default or min, min, max)
+    -- FIX Bug 5: guard against division by zero when min == max
+    local range = (max - min) ~= 0 and (max - min) or 1
 
     local frame=New("Frame",{Name="SL_"..name,BackgroundColor3=Theme.Secondary,
         BackgroundTransparency=0.4,BorderSizePixel=0,
@@ -1634,7 +1641,7 @@ function Library._CreateSlider(tab, cfg)
     Corner(track,100)
 
     local fill=New("Frame",{BackgroundColor3=Theme.Accent,BorderSizePixel=0,
-        Size=UDim2.new((curVal-min)/(max-min),0,1,0),Parent=track})
+        Size=UDim2.new((curVal-min)/range,0,1,0),Parent=track})
     Corner(fill,100)
     New("UIGradient",{Color=ColorSequence.new({
         ColorSequenceKeypoint.new(0,Theme.AccentDark or Color3.fromRGB(80,65,180)),
@@ -1642,14 +1649,14 @@ function Library._CreateSlider(tab, cfg)
 
     local thumb=New("Frame",{BackgroundColor3=Theme.Toggle.Circle,
         AnchorPoint=Vector2.new(0.5,0.5),
-        Position=UDim2.new((curVal-min)/(max-min),0,0.5,0),
+        Position=UDim2.new((curVal-min)/range,0,0.5,0),
         Size=UDim2.new(0,12,0,12),BorderSizePixel=0,ZIndex=2,Parent=track})
     Corner(thumb,100); Stroke(thumb,Theme.Accent,1)
 
     -- Popup bubble
     local popup=New("Frame",{BackgroundColor3=Color3.fromRGB(18,18,24),
         AnchorPoint=Vector2.new(0.5,1),
-        Position=UDim2.new((curVal-min)/(max-min),0,-0.5,0),
+        Position=UDim2.new((curVal-min)/range,0,-0.5,0),
         Size=UDim2.new(0,38,0,20),Visible=false,ZIndex=50,BorderSizePixel=0,Parent=track})
     Corner(popup,4); Stroke(popup,Theme.BorderLight,1)
     local popLbl=New("TextLabel",{FontFace=Font.Bold,TextColor3=Theme.Accent,
@@ -1667,7 +1674,7 @@ function Library._CreateSlider(tab, cfg)
     local function SetValue(v)
         v=Snap(v)
         curVal=v
-        local t=(v-min)/(max-min)
+        local t=(v-min)/range  -- FIX Bug 5: use pre-computed `range` (no div/0)
         fill.Size         =UDim2.new(t,0,1,0)
         thumb.Position    =UDim2.new(t,0,0.5,0)
         popup.Position    =UDim2.new(t,0,-0.5,0)
@@ -1679,7 +1686,7 @@ function Library._CreateSlider(tab, cfg)
     local function HandleDrag(input)
         local tp=track.AbsolutePosition; local ts3=track.AbsoluteSize
         local rel=(input.Position.X-tp.X)/ts3.X
-        SetValue(min+(max-min)*math.clamp(rel,0,1))
+        SetValue(min+range*math.clamp(rel,0,1))
     end
 
     local frameBtn=frame:FindFirstChildWhichIsA("TextButton")
@@ -1871,7 +1878,10 @@ function Library._CreateDropdown(tab, cfg)
                     Size=UDim2.new(0,0,1,0),ZIndex=3,Parent=pill})
             end
         end
-        countBadge.Text = #selected > 0 and tostring(#selected) or ""
+        -- FIX Bug 3: countBadge is only created in multiSel mode; guard nil access
+        if countBadge then
+            countBadge.Text = #selected > 0 and tostring(#selected) or ""
+        end
     end
 
     -- ── Options dropdown panel ────────────────────────────────────────────────
